@@ -7,9 +7,7 @@
     "module": "commonjs",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@controllers/*": ["src/api/controllers/*"],
-      "@routes/*": ["src/api/routes/*"]
+      "@/*": ["src/*"]
     },
     "moduleResolution": "node",
     "strict": true,

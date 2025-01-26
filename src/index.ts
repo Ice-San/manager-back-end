@@ -12,6 +12,7 @@ app.get('/hello', (req: Request, res: Response) => {
 });
 
 app.use('/users/', usersRoutes);
+app.use("/user/", usersRoutes);
 
 app.listen(port, () => {
     client;

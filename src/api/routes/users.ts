@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { createUser } from '../controllers/users';
+import { createUser, getUser } from '../controllers/users';
 
 export default Router()
+                    .get('/:id', getUser)
                     .post('/', createUser);

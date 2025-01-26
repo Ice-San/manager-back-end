@@ -12,7 +12,7 @@ const client = new pg.Client({
 
 client
     .connect()
-    .then(() => console.log("Sucessfully connect to PostgreSQL Database!"))
+    .then(() => console.log("Sucessfully connect to PostgreSQL Database!\n"))
     .catch((err) => console.error("Connection Error: " + err.stack));
 
 export default client;

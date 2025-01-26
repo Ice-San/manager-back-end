@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import 'dotenv/config';
 
-import client from './config/db';
+import client from './db/config';
 import usersRoutes from './api/routes/users';
 
 const app = express();
@@ -12,7 +12,6 @@ app.get('/hello', (req: Request, res: Response) => {
 });
 
 app.use('/users/', usersRoutes);
-app.use("/user/", usersRoutes);
 
 app.listen(port, () => {
     client;

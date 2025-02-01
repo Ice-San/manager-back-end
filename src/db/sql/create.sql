@@ -101,6 +101,21 @@ VALUES(3);
 
 -- === FUNCTIONS ===
 
+-- 1. Get User ID
+
+CREATE OR REPLACE FUNCTION get_user_id(user_email VARCHAR(100))
+RETURNS INT AS $$
+DECLARE
+	user_id INT;
+BEGIN
+	SELECT u_id INTO user_id FROM users WHERE u_email = user_email;
+
+	RETURN user_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Create a Person
+
 CREATE OR REPLACE FUNCTION create_person(
     first_name VARCHAR(50),
     last_name VARCHAR(50),
@@ -119,6 +134,8 @@ BEGIN
     RETURN person_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 3. Create a User
 
 CREATE OR REPLACE FUNCTION create_user(
     un VARCHAR(50),
@@ -166,6 +183,45 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 4. Get a User Info
+
+CREATE OR REPLACE FUNCTION get_user(u_email VARCHAR(100))
+RETURNS SETOF view_all_users AS $$
+DECLARE
+	u_id INT;
+BEGIN
+	SELECT get_user_id(u_email) INTO u_id;
+
+	RETURN QUERY SELECT * FROM view_all_users WHERE user_id = u_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- === VIEWS ===
+
+-- 1. View All Users
+
+CREATE VIEW view_all_users AS
+SELECT 
+	u.u_id AS user_id, 
+	pe.p_first_name AS first_name, 
+	pe.p_last_name AS last_name, 
+	u.u_username AS username, 
+	u.u_email AS email, 
+	u.u_career AS career, 
+	u.u_location AS user_location, 
+	ut.ut_type AS user_type, 
+	up.up_level AS permission_level, 
+	acc.createdAt AS account_created_at
+FROM accounts acc
+INNER JOIN users u ON acc.u_id = u.u_id
+INNER JOIN persons pe ON u.p_id = pe.p_id
+INNER JOIN user_types ut ON acc.ut_id = ut.ut_id
+INNER JOIN user_permissions up ON acc.up_id = up.up_id;
+
+-- === CODE TO TEST DB ===
+
+-- 1. Create Users
+
 SELECT create_user(
     'john_doe', 
     'john@example.com', 
@@ -177,4 +233,37 @@ SELECT create_user(
     1
 );
 
-SELECT * FROM users;
+SELECT create_user(
+    'edgarVip456', 
+    'edgarvip@gmail.com', 
+    'Edgar', 
+    'Henriques', 
+    'Male', 
+    'edgarvipsupremo789', 
+    'director', 
+    2
+);
+
+SELECT create_user(
+    'cavalo47', 
+    'hectorsantos@example.com', 
+    'Hector', 
+    'Santos', 
+    'Male', 
+    'hectorsantos123', 
+    'user', 
+    3
+);
+
+SELECT create_user(
+    'flowers156', 
+    'lara@example.com', 
+    'Lara', 
+    'Marçal', 
+    'Female', 
+    'laraomg123', 
+    'user', 
+    3
+);
+
+SELECT get_user('lara@example.com');

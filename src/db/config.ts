@@ -1,11 +1,11 @@
 import pg from 'pg';
 
-const { DB_USER, DB_HOST, DB_DATABASE, DB_PASSWORD, DB_PORT } = process.env;
+const { DB_USER, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT } = process.env;
 
 const client = new pg.Client({
     user: DB_USER,
     host: DB_HOST,
-    database: DB_DATABASE,
+    database: DB_NAME,
     password: DB_PASSWORD,
     port: Number(DB_PORT),
 });

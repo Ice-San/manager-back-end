@@ -99,6 +99,28 @@ VALUES(2);
 INSERT INTO user_permissions(up_level)
 VALUES(3);
 
+-- === VIEWS ===
+
+-- 1. View All Users
+
+CREATE VIEW view_all_users AS
+SELECT 
+	u.u_id AS user_id,
+	pe.p_first_name AS first_name, 
+	pe.p_last_name AS last_name, 
+	u.u_username AS username,
+	u.u_email AS email,
+	u.u_career AS career, 
+	u.u_location AS user_location, 
+	ut.ut_type AS user_type, 
+	up.up_level AS permission_level, 
+	acc.createdAt AS account_created_at
+FROM accounts acc
+INNER JOIN users u ON acc.u_id = u.u_id
+INNER JOIN persons pe ON u.p_id = pe.p_id
+INNER JOIN user_types ut ON acc.ut_id = ut.ut_id
+INNER JOIN user_permissions up ON acc.up_id = up.up_id;
+
 -- === FUNCTIONS ===
 
 -- 1. Get User ID
@@ -147,21 +169,13 @@ CREATE OR REPLACE FUNCTION create_user(
     t VARCHAR(10),
     l INT
 ) 
-RETURNS VOID AS
+RETURNS SETOF view_all_users AS
 $$
 DECLARE
-    user_exists INT;
     u_id INT;
     ut_admin_id INT;
     up_admin_id INT;
 BEGIN
-    -- Check if the user already exists
-    SELECT COUNT(*) INTO user_exists FROM users WHERE u_email = e;
-
-    IF user_exists > 0 THEN
-        RETURN;
-    END IF;
-
     -- Insert into users
     INSERT INTO users (u_username, u_email, p_id)
     VALUES (un, e, create_person(n, ln, g))
@@ -180,6 +194,8 @@ BEGIN
     -- Insert into accounts
     INSERT INTO accounts (u_id, ut_id, up_id)
     VALUES (u_id, ut_admin_id, up_admin_id);
+
+	RETURN QUERY SELECT * FROM view_all_users WHERE email = e;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -196,27 +212,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- === VIEWS ===
+-- 5. SignIn
 
--- 1. View All Users
+CREATE OR REPLACE FUNCTION sign_in(user_email VARCHAR(100), user_password VARCHAR(255))
+RETURNS TABLE(u_id INT) AS $$
+BEGIN
+	RETURN QUERY
+		SELECT u.u_id
+		FROM users AS u
+		INNER JOIN passwords AS pw ON pw.u_id = u.u_id
+		WHERE u.u_email = user_email AND pw.pw_hashed_password = user_password;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE VIEW view_all_users AS
-SELECT 
-	u.u_id AS user_id, 
-	pe.p_first_name AS first_name, 
-	pe.p_last_name AS last_name, 
-	u.u_username AS username, 
-	u.u_email AS email, 
-	u.u_career AS career, 
-	u.u_location AS user_location, 
-	ut.ut_type AS user_type, 
-	up.up_level AS permission_level, 
-	acc.createdAt AS account_created_at
-FROM accounts acc
-INNER JOIN users u ON acc.u_id = u.u_id
-INNER JOIN persons pe ON u.p_id = pe.p_id
-INNER JOIN user_types ut ON acc.ut_id = ut.ut_id
-INNER JOIN user_permissions up ON acc.up_id = up.up_id;
+-- 6. Check User Exists
+
+CREATE OR REPLACE FUNCTION user_exist(e VARCHAR(100))
+RETURNS INT AS $$
+DECLARE user_exist INT;
+BEGIN
+	SELECT COUNT(*) INTO user_exist FROM users WHERE u_email = e;
+
+	RETURN user_exist;
+END;
+$$ LANGUAGE plpgsql;
+
 
 -- === CODE TO TEST DB ===
 
@@ -266,4 +286,14 @@ SELECT create_user(
     3
 );
 
-SELECT get_user('lara@example.com');
+
+SELECT * FROM create_user(
+    'test24', 
+    'test24@example.com', 
+    'Lara', 
+    'Marçal', 
+    'MALE', 
+    '123456', 
+    'user', 
+    3
+);

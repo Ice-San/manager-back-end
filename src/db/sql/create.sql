@@ -1,5 +1,5 @@
--- DROP DATABASE IF EXISTS node_db WITH (force);
--- CREATE DATABASE node_db;
+-- DROP DATABASE IF EXISTS manager_db WITH (force);
+-- CREATE DATABASE manager_db;
 
 -- === TABLES ===
 
@@ -80,7 +80,7 @@ INSERT INTO user_types(ut_type)
 VALUES('admin');
 
 INSERT INTO user_types(ut_type)
-VALUES('director');
+VALUES('moderator');
 
 INSERT INTO user_types(ut_type)
 VALUES('user');
@@ -260,40 +260,17 @@ SELECT create_user(
     'Henriques', 
     'Male', 
     'edgarvipsupremo789', 
-    'director', 
+    'moderator', 
     2
 );
 
 SELECT create_user(
     'cavalo47', 
-    'hectorsantos@example.com', 
+    'cavalo47@example.com', 
     'Hector', 
     'Santos', 
     'Male', 
     'hectorsantos123', 
-    'user', 
-    3
-);
-
-SELECT create_user(
-    'flowers156', 
-    'lara@example.com', 
-    'Lara', 
-    'Marçal', 
-    'Female', 
-    'laraomg123', 
-    'user', 
-    3
-);
-
-
-SELECT * FROM create_user(
-    'test24', 
-    'test24@example.com', 
-    'Lara', 
-    'Marçal', 
-    'MALE', 
-    '123456', 
     'user', 
     3
 );

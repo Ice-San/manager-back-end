@@ -1,5 +1,9 @@
 import client from "@/db/config";
+import { generateToken } from "@/helpers/jwt";
 import { Request, Response } from "express";
+import jsonwebtoken from 'jsonwebtoken';
+
+const { JWT } = process.env;
 
 export const signIn = async (req: Request, res: Response) => {
     const { email, password } = req.body;
@@ -27,12 +31,14 @@ export const signIn = async (req: Request, res: Response) => {
         const userId: string = result.rows[0]?.u_id;
 
         if(result.rows.length) {
+            const token = generateToken({userId});
+
             res.status(200).json({
                 status: 200,
                 message: 'Success SignIn!',
                 data: {
                     success: true,
-                    userId
+                    token
                 }
             });
             return;
@@ -54,4 +60,42 @@ export const signIn = async (req: Request, res: Response) => {
         });
     }
     return;
+}
+
+export const validation = async (req: Request, res: Response) => {
+    const { token } = req.body;
+
+    jsonwebtoken.verify(token, JWT as string, async (err: any, payload: any) => {
+        if(err) {
+            res.status(401).json({
+                status: 401,
+                message: 'Unauthorized!',
+                data: {
+                    success: false
+                }
+            });
+            return;
+        }
+
+        const userId = payload?.userId;
+
+        if(userId) {
+            res.status(200).json({
+                status: 200,
+                message: 'Authorized!',
+                data: {
+                    success: true
+                }
+            });
+            return;
+        }
+
+        res.status(401).json({
+            status: 401,
+            message: 'Unauthorized!',
+            data: {
+                success: false
+            }
+        });
+    });
 }

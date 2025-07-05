@@ -1,5 +1,5 @@
 {
-  "name": "auth-project",
+  "name": "manager-back-end",
   "version": "1.0.0",
   "description": "an amazing aplication to make auths",
   "main": "./src/index",

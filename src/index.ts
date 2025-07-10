@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/hello', (req: Request, res: Response) => {
-    res.send('Hello Friend! :D');
+    res.send('Hello Friend!');
 });
 
 app.use('/users', usersRoutes);

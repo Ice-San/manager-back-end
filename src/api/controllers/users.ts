@@ -99,7 +99,7 @@ export const getUsers = async (req: Request, res: Response) => {
 export const getUser = async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const query = `SELECT * FROM users WHERE u_id = $1;`
+    const query = `SELECT * FROM get_user('$1');`
     const result = await client.query(query, [id]);
     const data = result.rows[0];
 

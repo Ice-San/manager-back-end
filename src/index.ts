@@ -8,6 +8,7 @@ import authRoutes from './api/routes/auth';
 
 const app = express();
 const port = process.env.PORT || 3000;
+const domain = process.env.RAILWAY_PRIVATE_DOMAIN || "localhost";
 
 app.use(cors());
 app.use(express.json());
@@ -21,5 +22,5 @@ app.use('/auth', authRoutes);
 
 app.listen(port, () => {
     client;
-    console.log(`App is online at: http://localhost:${port}`);
+    console.log(`App is online at: http://${domain}:${port}`);
 });

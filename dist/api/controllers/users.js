@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUser = exports.getUsers = exports.createUser = void 0;
-const config_1 = __importDefault(require("@/db/config"));
+const config_1 = __importDefault(require("../../db/config"));
 const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username, email, password, confirmPassword } = req.body;
     if (!username || !email || !password || !confirmPassword) {

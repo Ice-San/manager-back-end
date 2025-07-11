@@ -13,8 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validation = exports.signIn = void 0;
-const config_1 = __importDefault(require("@/db/config"));
-const jwt_1 = require("@/helpers/jwt");
+const config_1 = __importDefault(require("../../db/config"));
+const jwt_1 = require("../../helpers/jwt");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const { JWT } = process.env;
 const signIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {

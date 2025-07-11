@@ -22,5 +22,5 @@ app.use('/auth', authRoutes);
 
 app.listen(port, () => {
     client;
-    console.log(`App is online at: http://${domain}:${port}`);
+    console.log(`App is online at: http://${domain}`);
 });

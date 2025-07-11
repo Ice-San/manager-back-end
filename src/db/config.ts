@@ -6,19 +6,19 @@ const {
     DB_NAME,
     DB_PASSWORD,
     DB_PORT,
-    PGUSER,
-    PGHOST,
-    PGDATABASE,
-    PGPASSWORD,
-    PGPORT
+    RAILWAY_DB_USER,
+    RAILWAY_DB_HOST,
+    RAILWAY_DB_NAME,
+    RAILWAY_DB_PASSWORD,
+    RAILWAY_DB_PORT
 } = process.env;
 
 const client = new pg.Client({
-    user: PGUSER || DB_USER,
-    host: PGHOST || DB_HOST,
-    database: PGDATABASE || DB_NAME,
-    password: PGPASSWORD || DB_PASSWORD,
-    port: Number(PGPORT || DB_PORT),
+    user: RAILWAY_DB_USER || DB_USER,
+    host: RAILWAY_DB_HOST || DB_HOST,
+    database: RAILWAY_DB_NAME || DB_NAME,
+    password: RAILWAY_DB_PASSWORD || DB_PASSWORD,
+    port: Number(RAILWAY_DB_PORT || DB_PORT),
 });
 
 client

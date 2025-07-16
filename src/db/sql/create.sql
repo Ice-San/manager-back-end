@@ -123,19 +123,6 @@ INNER JOIN user_permissions up ON acc.up_id = up.up_id;
 
 -- === FUNCTIONS ===
 
--- 1. Get User ID
-
-CREATE OR REPLACE FUNCTION get_user_id(user_email VARCHAR(100))
-RETURNS INT AS $$
-DECLARE
-	user_id INT;
-BEGIN
-	SELECT u_id INTO user_id FROM users WHERE u_email = user_email;
-
-	RETURN user_id;
-END;
-$$ LANGUAGE plpgsql;
-
 -- 2. Create a Person
 
 CREATE OR REPLACE FUNCTION create_person(
@@ -201,13 +188,9 @@ $$ LANGUAGE plpgsql;
 
 -- 4. Get a User Info
 
-CREATE OR REPLACE FUNCTION get_user(u_email VARCHAR(100))
+CREATE OR REPLACE FUNCTION get_user(u_id INT)
 RETURNS SETOF view_all_users AS $$
-DECLARE
-	u_id INT;
 BEGIN
-	SELECT get_user_id(u_email) INTO u_id;
-
 	RETURN QUERY SELECT * FROM view_all_users WHERE user_id = u_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -227,11 +210,11 @@ $$ LANGUAGE plpgsql;
 
 -- 6. Check User Exists
 
-CREATE OR REPLACE FUNCTION user_exist(e VARCHAR(100))
+CREATE OR REPLACE FUNCTION user_exist(user_id INT)
 RETURNS INT AS $$
-DECLARE user_exist INT;
+	DECLARE user_exist INT;
 BEGIN
-	SELECT COUNT(*) INTO user_exist FROM users WHERE u_email = e;
+	SELECT COUNT(*) INTO user_exist FROM users WHERE u_id = user_id;
 
 	RETURN user_exist;
 END;

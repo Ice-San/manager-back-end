@@ -1,7 +1,7 @@
 {
   "name": "manager-back-end",
   "version": "1.0.0",
-  "description": "an amazing aplication to make auths",
+  "description": "an amazing aplication to manage all ur users!",
   "main": "./src/index",
   "scripts": {
     "watch": "ts-node src/index.ts",

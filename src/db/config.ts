@@ -5,7 +5,8 @@ const {
     DB_HOST,
     DB_NAME,
     DB_PASSWORD,
-    DB_PORT
+    DB_PORT,
+    PORT
 } = process.env;
 
 const client = new pg.Client({
@@ -14,6 +15,9 @@ const client = new pg.Client({
     database: DB_NAME,
     password: DB_PASSWORD,
     port: Number(DB_PORT),
+    ssl: {
+        rejectUnauthorized: PORT !== "5005"
+    }
 });
 
 client

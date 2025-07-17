@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import client from "./db/config";
 
-export const middleware = async (req: Request, res: Response, next: NextFunction) => {
+import { userExists } from '@/helpers/userExists';
+
+export const verifyJWT = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { token } = req.body;
         const { JWT } = process.env;
@@ -60,11 +61,4 @@ export const middleware = async (req: Request, res: Response, next: NextFunction
             message: "Something goes wrong..."
         });
     }
-}
-
-const userExists = async (id: number) => {
-    const query = `SELECT * FROM user_exist($1)`;
-    const result = await client.query(query, [id]);
-
-    return result.rows.length < 0;
 }

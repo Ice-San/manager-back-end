@@ -1,49 +1,32 @@
-import express, { Request, Response } from 'express';
+import '@/globals/extensions/string';
+
+import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 
-import { middleware } from './middleware';
+import client from '@/db/config';
 
-import client from './db/config';
+import { verifyJWT } from '@/middleware/verifyJWT';
 
-import usersRoutes from './api/routes/users';
-import authRoutes from './api/routes/auth';
+import helloRoutes from '@/api/routes/hello';
+import authRoutes from '@/api/routes/auth';
+import usersRoutes from '@/api/routes/users';
 
-const { 
-    PORT, 
-    RENDER_PUBLIC_DOMAIN, 
-    RAILWAY_PUBLIC_DOMAIN 
-} = process.env;
+import { getDomain } from '@/helpers/getDomain';
 
 const app = express();
-const port = PORT || 3000;
-const domain = RAILWAY_PUBLIC_DOMAIN || RENDER_PUBLIC_DOMAIN || "localhost";
+const domain = getDomain();
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
-app.get('/hello', (req: Request, res: Response) => {
-    res.send('Hello Friend!');
-});
-
-app.use('/users', middleware, usersRoutes);
+app.use('/hello', helloRoutes);
 app.use('/auth', authRoutes);
+app.use('/users', verifyJWT, usersRoutes);
 
-app.listen(port, () => {
+app.listen(port , () => {
     client;
-
-    let url;
-    switch (domain) {
-        case RAILWAY_PUBLIC_DOMAIN:
-            url = `Public URL (Railway): https://${RAILWAY_PUBLIC_DOMAIN}`;
-            break;
-        case RENDER_PUBLIC_DOMAIN:
-            url = `Public URL (Render): ${RENDER_PUBLIC_DOMAIN}`;
-            break;
-        default:
-            url = `Local URL: http://localhost:${port}`;
-            break;
-    }
-
+    const url = `${domain.type.toCapitalize()} URL (${domain.provider.toCapitalize()}): ${domain.url.toCapitalize()}`;
     console.log(`App is online at: ${url}`);
 });

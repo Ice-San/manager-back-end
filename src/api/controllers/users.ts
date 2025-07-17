@@ -97,10 +97,10 @@ export const getUsers = async (req: Request, res: Response) => {
 }
 
 export const getUser = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const { userId } = res.locals;
 
     const query = `SELECT * FROM get_user($1);`
-    const result = await client.query(query, [id]);
+    const result = await client.query(query, [userId]);
     const data = result.rows[0];
 
     if(!data)

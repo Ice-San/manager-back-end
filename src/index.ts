@@ -2,7 +2,10 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 
+import { middleware } from './middleware';
+
 import client from './db/config';
+
 import usersRoutes from './api/routes/users';
 import authRoutes from './api/routes/auth';
 
@@ -23,7 +26,7 @@ app.get('/hello', (req: Request, res: Response) => {
     res.send('Hello Friend!');
 });
 
-app.use('/users', usersRoutes);
+app.use('/users', middleware, usersRoutes);
 app.use('/auth', authRoutes);
 
 app.listen(port, () => {

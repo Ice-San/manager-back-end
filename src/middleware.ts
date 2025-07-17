@@ -1,0 +1,71 @@
+import { Request, Response, NextFunction } from "express";
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import client from "./db/config";
+
+export const middleware = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { token } = req.body;
+        const { JWT } = process.env;
+
+        if(!token) {
+            res.status(401).send({
+                status: 401,
+                message: "Invalid Token"
+            });
+            return;
+        }
+
+        if(typeof token !== "string") {
+            res.status(400).send({
+                status: 400,
+                message: "Invalid Token"
+            });
+            return;
+        }
+
+        const payload = jwt.verify(token, JWT as string)
+        const { userId } = payload as JwtPayload;
+
+        if(!userId) {
+            res.status(400).send({
+                status: 400,
+                message: "Invalid Token"
+            });
+            return;
+        }
+
+        const user = await userExists(userId);
+
+        if(!user) {
+            res.status(404).send({
+                status: 404,
+                message: "User Not Found"
+            });
+            return;
+        }
+
+        req.body.user = user;
+        next();
+    } catch (err) {
+        if(err instanceof jwt.JsonWebTokenError) {
+            res.status(401).send({
+                status: 401,
+                message: "Token Expired"
+            });
+            return;
+        }
+
+        res.status(500).send({
+            status: 500,
+            message: "Something goes wrong..."
+        });
+    }
+}
+
+const userExists = async (id: number) => {
+    const query = `SELECT * FROM user_exist($1)`
+    const result = await client.query(query, [id])
+    const data = result.rows[0];
+
+    return data;
+}

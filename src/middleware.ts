@@ -44,7 +44,7 @@ export const middleware = async (req: Request, res: Response, next: NextFunction
             return;
         }
 
-        req.body.user = user;
+        res.locals.userId = userId;
         next();
     } catch (err) {
         if(err instanceof jwt.JsonWebTokenError) {
@@ -63,9 +63,8 @@ export const middleware = async (req: Request, res: Response, next: NextFunction
 }
 
 const userExists = async (id: number) => {
-    const query = `SELECT * FROM user_exist($1)`
-    const result = await client.query(query, [id])
-    const data = result.rows[0];
+    const query = `SELECT * FROM user_exist($1)`;
+    const result = await client.query(query, [id]);
 
-    return data;
+    return result.rows.length < 0;
 }

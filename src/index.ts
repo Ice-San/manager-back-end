@@ -27,6 +27,6 @@ app.use('/users', verifyJWT, usersRoutes);
 
 app.listen(port , () => {
     client;
-    const url = `${domain.type.toCapitalize()} URL (${domain.provider.toCapitalize()}): ${domain.url.toCapitalize()}`;
+    const url = `${domain.type.toCapitalize()} URL (${domain.provider.toCapitalize()}): ${domain.url}`;
     console.log(`App is online at: ${url}`);
 });

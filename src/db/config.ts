@@ -16,7 +16,8 @@ const client = new pg.Client({
     password: DB_PASSWORD,
     port: Number(DB_PORT),
     ssl: {
-        rejectUnauthorized: PORT !== "5005"
+        // rejectUnauthorized: PORT !== "5005"
+        rejectUnauthorized: true
     }
 });
 

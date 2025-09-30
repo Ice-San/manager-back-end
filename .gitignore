@@ -1,5 +1,7 @@
 /node_modules
 
+/src/db/sql/create.sql
+
 /build
 
 .DS_Store

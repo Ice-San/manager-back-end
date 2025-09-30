@@ -1,5 +1,20 @@
--- DROP DATABASE IF EXISTS manager_db WITH (force);
--- CREATE DATABASE manager_db;
+-- === DELETE DATABASE DATA ===
+
+-- DROP VIEW IF EXISTS view_all_users CASCADE;
+
+-- DROP FUNCTION IF EXISTS create_person(VARCHAR, VARCHAR, VARCHAR) CASCADE;
+-- DROP FUNCTION IF EXISTS create_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, INT, VARCHAR) CASCADE;
+-- DROP FUNCTION IF EXISTS get_user(INT) CASCADE;
+-- DROP FUNCTION IF EXISTS sign_in(VARCHAR, VARCHAR) CASCADE;
+-- DROP FUNCTION IF EXISTS user_exist(INT) CASCADE;
+
+-- DROP TABLE IF EXISTS accounts CASCADE;
+-- DROP TABLE IF EXISTS user_activitys CASCADE;
+-- DROP TABLE IF EXISTS user_permissions CASCADE;
+-- DROP TABLE IF EXISTS user_types CASCADE;
+-- DROP TABLE IF EXISTS passwords CASCADE;
+-- DROP TABLE IF EXISTS users CASCADE;
+-- DROP TABLE IF EXISTS persons CASCADE;
 
 -- === TABLES ===
 
@@ -57,17 +72,27 @@ CREATE TABLE user_permissions (
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. ACCOUNTS
+-- 6. USER ACTIVITY
+
+CREATE TABLE user_activitys (
+	ua_id SERIAL PRIMARY KEY,
+	ua_status VARCHAR(50),
+	createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. ACCOUNTS
 
 CREATE TABLE accounts (
     a_id SERIAL PRIMARY KEY,
     u_id INT NOT NULL,
     ut_id INT NOT NULL,
     up_id INT NOT NULL,
+	ua_id INT NOT NULL,
     
     FOREIGN KEY (u_id) REFERENCES users(u_id),
     FOREIGN KEY (ut_id) REFERENCES user_types(ut_id),
     FOREIGN KEY (up_id) REFERENCES user_permissions(up_id),
+	FOREIGN KEY (ua_id) REFERENCES user_activitys(ua_id),
     
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -99,6 +124,14 @@ VALUES(2);
 INSERT INTO user_permissions(up_level)
 VALUES(3);
 
+-- 3. CREATE USER ACTIVITYS
+
+INSERT INTO user_activitys(ua_status)
+VALUES('active');
+
+INSERT INTO user_activitys(ua_status)
+VALUES('inactive');
+
 -- === VIEWS ===
 
 -- 1. View All Users
@@ -113,13 +146,15 @@ SELECT
 	u.u_career AS career, 
 	u.u_location AS user_location, 
 	ut.ut_type AS user_type, 
-	up.up_level AS permission_level, 
+	up.up_level AS permission_level,
+	ua.ua_status AS activity,
 	acc.createdAt AS account_created_at
 FROM accounts acc
 INNER JOIN users u ON acc.u_id = u.u_id
 INNER JOIN persons pe ON u.p_id = pe.p_id
 INNER JOIN user_types ut ON acc.ut_id = ut.ut_id
-INNER JOIN user_permissions up ON acc.up_id = up.up_id;
+INNER JOIN user_permissions up ON acc.up_id = up.up_id
+INNER JOIN user_activitys ua ON acc.ua_id = ua.ua_id;
 
 -- === FUNCTIONS ===
 
@@ -154,7 +189,7 @@ CREATE OR REPLACE FUNCTION create_user(
     g VARCHAR(20),
     p VARCHAR(255),
     t VARCHAR(10),
-    l INT
+	s VARCHAR(50)
 ) 
 RETURNS SETOF view_all_users AS
 $$
@@ -162,7 +197,13 @@ DECLARE
     u_id INT;
     ut_admin_id INT;
     up_admin_id INT;
+	ua_admin_id INT;
 BEGIN
+	-- Verify if user type is valid
+	IF t IS NULL OR t = '' THEN
+		RETURN;
+	END IF;
+
     -- Insert into users
     INSERT INTO users (u_username, u_email, p_id)
     VALUES (un, e, create_person(n, ln, g))
@@ -176,11 +217,24 @@ BEGIN
     SELECT ut_id INTO ut_admin_id FROM user_types WHERE ut_type = t;
 
     -- Get up_admin_id
-    SELECT up_id INTO up_admin_id FROM user_permissions WHERE up_level = l;
+	IF t = 'admin' THEN
+		SELECT up_id INTO up_admin_id FROM user_permissions WHERE up_level = 1;
+	END IF;
+	
+	IF t = 'moderator' THEN
+		SELECT up_id INTO up_admin_id FROM user_permissions WHERE up_level = 2;
+	END IF;
+	
+	IF t = 'user' THEN
+		SELECT up_id INTO up_admin_id FROM user_permissions WHERE up_level = 3;
+	END IF;
+
+	-- Get ua_admin_id
+	SELECT ua_id INTO ua_admin_id FROM user_activitys WHERE ua_status = s;
 
     -- Insert into accounts
-    INSERT INTO accounts (u_id, ut_id, up_id)
-    VALUES (u_id, ut_admin_id, up_admin_id);
+    INSERT INTO accounts (u_id, ut_id, up_id, ua_id)
+    VALUES (u_id, ut_admin_id, up_admin_id, ua_admin_id);
 
 	RETURN QUERY SELECT * FROM view_all_users WHERE email = e;
 END;
@@ -210,7 +264,7 @@ $$ LANGUAGE plpgsql;
 
 -- 6. Check User Exists
 
-CREATE OR REPLACE FUNCTION user_exist(user_id INT)
+CREATE OR REPLACE FUNCTION user_exists(user_id INT)
 RETURNS INT AS $$
 	DECLARE user_exist INT;
 BEGIN
@@ -232,8 +286,8 @@ SELECT create_user(
     'Doe', 
     'Male', 
     'hashedpassword123', 
-    'admin', 
-    1
+    'admin',
+	'active'
 );
 
 SELECT create_user(
@@ -243,8 +297,8 @@ SELECT create_user(
     'Henriques', 
     'Male', 
     'edgarvipsupremo789', 
-    'moderator', 
-    2
+    'moderator',
+	'inactive'
 );
 
 SELECT create_user(
@@ -254,6 +308,6 @@ SELECT create_user(
     'Santos', 
     'Male', 
     'hectorsantos123', 
-    'user', 
-    3
+    'user',
+	'inactive'
 );

@@ -2,36 +2,37 @@ import client from "@/db/config";
 import { Request, Response } from "express";
 
 export const createUser = async (req: Request, res: Response) => {
-    const { username, email, password, confirmPassword } = req.body;
+    const { username, email, role } = req.body;
 
-    if(!username || !email || !password || !confirmPassword) {
+    if(!username || !email || !role) {
         res.status(400).send({
             status: 400,
-            message: 'Missing required fields!'
+            message: 'Missing required fields!',
+            data: {
+                success: false
+            }
         });
         return;
     }
 
-    if(typeof username === 'undefined' || typeof email === 'undefined' || typeof password === 'undefined' || typeof confirmPassword === 'undefined') {
+    if(typeof username === 'undefined' || typeof email === 'undefined' || typeof role === 'undefined') {
         res.status(400).send({
             status: 400,
-            message: 'The values are undefined!'
+            message: 'The values are undefined!',
+            data: {
+                success: false
+            }
         });
         return;
     }
 
-    if(typeof username !== 'string' || typeof email !== 'string' || typeof password !== 'string' || typeof confirmPassword !== 'string') {
+    if(typeof username !== 'string' || typeof email !== 'string' || typeof role !== 'string') {
         res.status(400).send({
             status: 400,
-            message: 'The values aren\'t strings!'
-        });
-        return;
-    }
-
-    if(password !== confirmPassword) {
-        res.status(400).send({
-            status: 400,
-            message: 'Passwords don\'t matchs!'
+            message: 'The values aren\'t strings!',
+            data: {
+                success: false
+            }
         });
         return;
     }
@@ -43,16 +44,19 @@ export const createUser = async (req: Request, res: Response) => {
         if(user_exist === 1) {
             res.status(409).send({
                 status: 409,
-                message: 'User already exists!'
+                message: 'User already exists!',
+                data: {
+                    success: false
+                }
             });
             return;
         }
 
-        const query = `SELECT * FROM create_user($1, $2, '', '', '', $3, 'user', 3)`;
+        const query = `SELECT * FROM create_user($1, $2, '', '', '', 'manager_app', $3, 'active')`;
         const values = [
             username,
             email,
-            password,
+            role
         ];
         const result = await client.query(query, values);
         const userId: string = result.rows[0].user_id;
@@ -70,7 +74,10 @@ export const createUser = async (req: Request, res: Response) => {
         
         res.status(500).send({
             status: 500,
-            message: 'Error creating user...'
+            message: 'Error creating user...',
+            data: {
+                success: false
+            }
         });
     }
     return;

@@ -4,12 +4,13 @@
 
 -- DROP FUNCTION IF EXISTS create_person(VARCHAR, VARCHAR, VARCHAR) CASCADE;
 -- DROP FUNCTION IF EXISTS create_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, INT, VARCHAR) CASCADE;
+-- DROP FUNCTION IF EXISTS get_users(INT) CASCADE;
 -- DROP FUNCTION IF EXISTS get_user(INT) CASCADE;
 -- DROP FUNCTION IF EXISTS sign_in(VARCHAR, VARCHAR) CASCADE;
 -- DROP FUNCTION IF EXISTS user_exist(INT) CASCADE;
 
 -- DROP TABLE IF EXISTS accounts CASCADE;
--- DROP TABLE IF EXISTS user_activitys CASCADE;
+-- DROP TABLE IF EXISTS user_status CASCADE;
 -- DROP TABLE IF EXISTS user_permissions CASCADE;
 -- DROP TABLE IF EXISTS user_types CASCADE;
 -- DROP TABLE IF EXISTS passwords CASCADE;
@@ -72,11 +73,11 @@ CREATE TABLE user_permissions (
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. USER ACTIVITY
+-- 6. USER STATUS
 
-CREATE TABLE user_activitys (
-	ua_id SERIAL PRIMARY KEY,
-	ua_status VARCHAR(50),
+CREATE TABLE user_status (
+	us_id SERIAL PRIMARY KEY,
+	us_status VARCHAR(50),
 	createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -87,12 +88,12 @@ CREATE TABLE accounts (
     u_id INT NOT NULL,
     ut_id INT NOT NULL,
     up_id INT NOT NULL,
-	ua_id INT NOT NULL,
+	us_id INT NOT NULL,
     
     FOREIGN KEY (u_id) REFERENCES users(u_id),
     FOREIGN KEY (ut_id) REFERENCES user_types(ut_id),
     FOREIGN KEY (up_id) REFERENCES user_permissions(up_id),
-	FOREIGN KEY (ua_id) REFERENCES user_activitys(ua_id),
+	FOREIGN KEY (us_id) REFERENCES user_status(us_id),
     
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -126,10 +127,10 @@ VALUES(3);
 
 -- 3. CREATE USER ACTIVITYS
 
-INSERT INTO user_activitys(ua_status)
+INSERT INTO user_status(us_status)
 VALUES('active');
 
-INSERT INTO user_activitys(ua_status)
+INSERT INTO user_status(us_status)
 VALUES('inactive');
 
 -- === VIEWS ===
@@ -138,7 +139,6 @@ VALUES('inactive');
 
 CREATE VIEW view_all_users AS
 SELECT 
-	u.u_id AS user_id,
 	pe.p_first_name AS first_name, 
 	pe.p_last_name AS last_name, 
 	u.u_username AS username,
@@ -147,18 +147,18 @@ SELECT
 	u.u_location AS user_location, 
 	ut.ut_type AS user_type, 
 	up.up_level AS permission_level,
-	ua.ua_status AS activity,
+	us.us_status AS status,
 	acc.createdAt AS account_created_at
 FROM accounts acc
 INNER JOIN users u ON acc.u_id = u.u_id
 INNER JOIN persons pe ON u.p_id = pe.p_id
 INNER JOIN user_types ut ON acc.ut_id = ut.ut_id
 INNER JOIN user_permissions up ON acc.up_id = up.up_id
-INNER JOIN user_activitys ua ON acc.ua_id = ua.ua_id;
+INNER JOIN user_status us ON acc.us_id = us.us_id;
 
 -- === FUNCTIONS ===
 
--- 2. Create a Person
+-- 1. Create a Person
 
 CREATE OR REPLACE FUNCTION create_person(
     first_name VARCHAR(50),
@@ -179,7 +179,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 3. Create a User
+-- 2. Create a User
 
 CREATE OR REPLACE FUNCTION create_user(
     un VARCHAR(50),
@@ -197,7 +197,7 @@ DECLARE
     u_id INT;
     ut_admin_id INT;
     up_admin_id INT;
-	ua_admin_id INT;
+	us_admin_id INT;
 BEGIN
 	-- Verify if user type is valid
 	IF t IS NULL OR t = '' THEN
@@ -229,14 +229,27 @@ BEGIN
 		SELECT up_id INTO up_admin_id FROM user_permissions WHERE up_level = 3;
 	END IF;
 
-	-- Get ua_admin_id
-	SELECT ua_id INTO ua_admin_id FROM user_activitys WHERE ua_status = s;
+	-- Get us_admin_id
+	SELECT us_id INTO us_admin_id FROM user_status WHERE us_status = s;
 
     -- Insert into accounts
-    INSERT INTO accounts (u_id, ut_id, up_id, ua_id)
-    VALUES (u_id, ut_admin_id, up_admin_id, ua_admin_id);
+    INSERT INTO accounts (u_id, ut_id, up_id, us_id)
+    VALUES (u_id, ut_admin_id, up_admin_id, us_admin_id);
 
 	RETURN QUERY SELECT * FROM view_all_users WHERE email = e;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. Get Users Info
+
+CREATE OR REPLACE FUNCTION get_users(u_limit INT)
+RETURNS SETOF view_all_users AS $$
+BEGIN
+	IF u_limit > 50 THEN
+		RETURN;
+	END IF;
+
+	RETURN QUERY SELECT * FROM view_all_users LIMIT u_limit;
 END;
 $$ LANGUAGE plpgsql;
 

@@ -5,10 +5,21 @@ import { userExists } from '@/helpers/userExists';
 
 export const verifyJWT = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { token } = req.body;
+        const authorization = req.headers['authorization'];
         const { JWT } = process.env;
 
-        if(!token) {
+        if(!authorization) {
+            res.status(401).send({
+                status: 401,
+                message: "Invalid Token"
+            });
+            return;
+        }
+
+        const bearer = authorization.split(' ')[0];
+        const token = authorization.split(' ')[1];
+
+        if(bearer !== "Bearer") {
             res.status(401).send({
                 status: 401,
                 message: "Invalid Token"

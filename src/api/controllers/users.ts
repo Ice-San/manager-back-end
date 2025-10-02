@@ -84,10 +84,10 @@ export const createUser = async (req: Request, res: Response) => {
 }
 
 export const getUsers = async (req: Request, res: Response) => {
-    const { career, location } = req.query;
+    const { max } = req.query;
 
-    const query = career || location ? `SELECT * FROM users WHERE u_location = ${location} OR u_career = ${career};` : 'SELECT * FROM users';
-    const result = await client.query(query);
+    const query = 'SELECT * FROM get_users($1)';
+    const result = max ? await client.query(query, [Number(max)]) : await client.query(query, [50]);
     const data = result.rows;
 
     if(!data)

@@ -16,8 +16,7 @@ export const verifyJWT = async (req: Request, res: Response, next: NextFunction)
             return;
         }
 
-        const bearer = authorization.split(' ')[0];
-        const token = authorization.split(' ')[1];
+        const [ bearer, token ] = authorization.split(' ');
 
         if(bearer !== "Bearer") {
             res.status(401).send({

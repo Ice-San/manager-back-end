@@ -1,4 +1,5 @@
 import client from "@/db/config";
+import { userVerify } from "@/helpers/userVerify";
 import { Request, Response } from "express";
 
 export const createUser = async (req: Request, res: Response) => {
@@ -38,10 +39,9 @@ export const createUser = async (req: Request, res: Response) => {
     }
 
     try {
-        const queryUserExist = await client.query(`SELECT user_exist('${email}')`);
-        const { user_exist } = queryUserExist.rows[0];
+        const user = await userVerify(email);
 
-        if(user_exist === 1) {
+        if(!user) {
             res.status(409).send({
                 status: 409,
                 message: 'User already exists!',
@@ -104,17 +104,19 @@ export const getUsers = async (req: Request, res: Response) => {
 }
 
 export const getUser = async (req: Request, res: Response) => {
-    const { userId } = res.locals;
+    const { id } = req.params;
 
     const query = `SELECT * FROM get_user($1);`
-    const result = await client.query(query, [userId]);
+    const result = await client.query(query, [id]);
     const data = result.rows[0];
 
-    if(!data)
+    if(!data) {
         res.status(404).send({ 
             status: 404, 
             message: 'User not found... :(',
         });
+        return;
+    }
 
     res.status(200).send({ 
         status: 200, 

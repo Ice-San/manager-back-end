@@ -7,7 +7,8 @@
 -- DROP FUNCTION IF EXISTS get_users(INT) CASCADE;
 -- DROP FUNCTION IF EXISTS get_user(INT) CASCADE;
 -- DROP FUNCTION IF EXISTS sign_in(VARCHAR, VARCHAR) CASCADE;
--- DROP FUNCTION IF EXISTS user_exist(INT) CASCADE;
+-- DROP FUNCTION IF EXISTS user_exists(INT) CASCADE;
+-- DROP FUNCTION IF EXISTS user_verify(VARCHAR) CASCADE;
 
 -- DROP TABLE IF EXISTS accounts CASCADE;
 -- DROP TABLE IF EXISTS user_status CASCADE;
@@ -138,7 +139,8 @@ VALUES('inactive');
 -- 1. View All Users
 
 CREATE VIEW view_all_users AS
-SELECT 
+SELECT
+    u.u_id AS user_id,
 	pe.p_first_name AS first_name, 
 	pe.p_last_name AS last_name, 
 	u.u_username AS username,
@@ -284,6 +286,18 @@ BEGIN
 	SELECT COUNT(*) INTO user_exist FROM users WHERE u_id = user_id;
 
 	RETURN user_exist;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 7. User Verify
+
+CREATE OR REPLACE FUNCTION user_verify(user_email VARCHAR(100))
+RETURNS INT AS $$
+	DECLARE user_count INT;
+BEGIN
+	SELECT COUNT(*) INTO user_count FROM users WHERE u_email = user_email;
+
+	RETURN user_count;
 END;
 $$ LANGUAGE plpgsql;
 

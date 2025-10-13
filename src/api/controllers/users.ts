@@ -87,7 +87,7 @@ export const getUsers = async (req: Request, res: Response) => {
     const { max } = req.query;
 
     const query = 'SELECT * FROM get_users($1)';
-    const result = max ? await client.query(query, [Number(max)]) : await client.query(query, [50]);
+    const result = max ? await client.query(query, [max]) : await client.query(query, [50]);
     const data = result.rows;
 
     if(!data)
@@ -106,7 +106,7 @@ export const getUsers = async (req: Request, res: Response) => {
 export const getUser = async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const query = `SELECT * FROM get_user($1);`
+    const query = 'SELECT * FROM get_user($1);'
     const result = await client.query(query, [id]);
     const data = result.rows[0];
 
@@ -123,4 +123,111 @@ export const getUser = async (req: Request, res: Response) => {
         message: 'User Found!',
         data
     });
+}
+
+export const deleteUser = async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if(!email) {
+        res.status(400).send({
+            status: 400,
+            message: 'Missing required fields!'
+        });
+        return;
+    }
+
+    if(typeof email === 'undefined') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values are undefined!'
+        });
+        return;
+    }
+
+    if(typeof email !== 'string') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values aren\'t strings!'
+        });
+        return;
+    }
+
+    try {
+        const query = 'SELECT * FROM delete_user($1)';
+        const result = await client.query(query, [email]);
+        const data = result.rows[0];
+
+        if(!data) {
+            res.status(404).send({
+                status: 404,
+                message: 'User doens\'t exists!'
+            });
+            return;
+        }
+
+        res.status(200).send({
+            status: 200,
+            message: "User was deleted successfully!"
+        });
+    } catch (err) {
+        console.error('Deleting user failed:', err);
+        res.status(404).send({
+            status: 404,
+            message: 'Something went wrong deleting user!'
+        });
+    }
+}
+
+export const reactivateUser = async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if(!email) {
+        res.status(400).send({
+            status: 400,
+            message: 'Missing required fields!'
+        });
+        return;
+    }
+
+    if(typeof email === 'undefined') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values are undefined!'
+        });
+        return;
+    }
+
+    if(typeof email !== 'string') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values aren\'t strings!'
+        });
+        return;
+    }
+
+    try {
+        const query = 'SELECT * FROM reactivate_user($1)';
+        const result = await client.query(query, [email]);
+        const data = result.rows[0];
+
+        if(!data) {
+            res.status(404).send({
+                status: 404,
+                message: 'Something in reactivating user went wrong...'
+            });
+            return;
+        }
+
+        res.status(200).send({
+            status: 200,
+            message: 'User was Reactivated Successfully!',
+            data
+        })
+    } catch (err) {
+        console.error('Reactivating user failed:', err);
+        res.status(404).send({
+            status: 404,
+            message: 'Something in reactivating user went wrong...'
+        });
+    }
 }

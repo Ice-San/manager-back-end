@@ -1,23 +1,3 @@
--- === DELETE DATABASE DATA ===
-
--- DROP VIEW IF EXISTS view_all_users CASCADE;
-
--- DROP FUNCTION IF EXISTS create_person(VARCHAR, VARCHAR, VARCHAR) CASCADE;
--- DROP FUNCTION IF EXISTS create_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, INT, VARCHAR) CASCADE;
--- DROP FUNCTION IF EXISTS get_users(INT) CASCADE;
--- DROP FUNCTION IF EXISTS get_user(INT) CASCADE;
--- DROP FUNCTION IF EXISTS sign_in(VARCHAR, VARCHAR) CASCADE;
--- DROP FUNCTION IF EXISTS user_exists(INT) CASCADE;
--- DROP FUNCTION IF EXISTS user_verify(VARCHAR) CASCADE;
-
--- DROP TABLE IF EXISTS accounts CASCADE;
--- DROP TABLE IF EXISTS user_status CASCADE;
--- DROP TABLE IF EXISTS user_permissions CASCADE;
--- DROP TABLE IF EXISTS user_types CASCADE;
--- DROP TABLE IF EXISTS passwords CASCADE;
--- DROP TABLE IF EXISTS users CASCADE;
--- DROP TABLE IF EXISTS persons CASCADE;
-
 -- === TABLES ===
 
 -- 1. PERSONS
@@ -251,7 +231,7 @@ BEGIN
 		RETURN;
 	END IF;
 
-	RETURN QUERY SELECT * FROM view_all_users LIMIT u_limit;
+	RETURN QUERY SELECT * FROM view_all_users WHERE status = 'active' LIMIT u_limit;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -301,6 +281,145 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 8. Delete User
+
+CREATE OR REPLACE FUNCTION delete_user(user_email VARCHAR(100))
+RETURNS VARCHAR(40) AS $$
+	DECLARE 
+		get_user_id INT;
+		user_exist INT;
+		account_id INT; 
+		status_id INT;
+BEGIN
+	SELECT user_id INTO get_user_id FROM view_all_users
+	WHERE email = user_email;
+
+	SELECT user_exists INTO user_exist
+	FROM user_exists(get_user_id);
+
+	IF user_exist = 0 OR user_exist IS NULL THEN
+		RETURN 'User doesnt exists!';
+	END IF;
+
+	SELECT a_id INTO account_id
+	FROM accounts
+	WHERE u_id = get_user_id;
+
+	IF account_id IS NULL THEN
+		RETURN '';
+	END IF;
+
+	SELECT us_id INTO status_id
+	FROM user_status
+	WHERE us_status = 'inactive';
+
+	IF status_id IS NULL THEN
+		RETURN '';
+	END IF;
+
+	UPDATE accounts
+	SET us_id = status_id
+	WHERE a_id = account_id;
+
+	RETURN 'User was deleted successfully!';
+END;
+$$ LANGUAGE plpgsql;
+
+-- 9. ReActivate User
+
+CREATE OR REPLACE FUNCTION reactivate_user(user_email VARCHAR(100))
+RETURNS TABLE(username VARCHAR(50), user_type VARCHAR(50), joined TIMESTAMP) AS $$
+DECLARE 
+		get_user_id INT;
+		user_exist INT;
+		account_id INT; 
+		status_id INT;
+BEGIN
+	SELECT user_id INTO get_user_id FROM view_all_users
+	WHERE email = user_email;
+
+	SELECT user_exists INTO user_exist
+	FROM user_exists(get_user_id);
+
+	IF user_exist = 0 OR user_exist IS NULL THEN
+		RETURN;
+	END IF;
+
+	SELECT a_id INTO account_id
+	FROM accounts
+	WHERE u_id = get_user_id;
+
+	IF account_id IS NULL THEN
+		RETURN;
+	END IF;
+
+	SELECT us_id INTO status_id
+	FROM user_status
+	WHERE us_status = 'active';
+
+	IF status_id IS NULL THEN
+		RETURN;
+	END IF;
+
+	UPDATE accounts
+	SET us_id = status_id
+	WHERE a_id = account_id;
+
+	RETURN QUERY SELECT u.u_username AS username, ut.ut_type as user_type, acc.createdAt AS joined
+	FROM accounts AS acc
+	INNER JOIN users AS u ON u.u_id = acc.u_id
+	INNER JOIN user_types AS ut ON ut.ut_id = acc.ut_id
+	WHERE acc.a_id = account_id;
+END;
+$$ LANGUAGE plpgsql
+
+-- 10. Update User Info
+
+CREATE OR REPLACE FUNCTION update_user(
+	user_id INT,
+	un VARCHAR(50),
+    e VARCHAR(100),
+    n VARCHAR(50),
+    ln VARCHAR(50),
+    g VARCHAR(20),
+	pw VARCHAR(255)
+)
+RETURNS VARCHAR(40) AS $$
+	DECLARE 
+		user_exist INT;
+		person_id INT;
+		password_id INT;
+BEGIN
+	SELECT user_exists INTO user_exist FROM user_exists(user_id);
+
+	IF user_exist = 0 OR user_exist IS NULL THEN
+		RETURN 'User doesnt exists!';
+	END IF;
+
+	SELECT p_id INTO person_id FROM users
+	WHERE u_id = user_id;
+
+	SELECT pw_id INTO password_id FROM passwords
+	WHERE u_id = user_id;
+
+	UPDATE users
+	SET u_username = un,
+		u_email = e
+	WHERE u_id = user_id;
+
+	UPDATE persons
+	SET	p_first_name = n,
+		p_last_name = ln,
+		p_genre = g
+	WHERE p_id = person_id;
+
+	UPDATE passwords
+	SET pw_hashed_password = pw
+	WHERE pw_id = password_id;
+
+	RETURN 'User was updated successfully!';
+END;
+$$ LANGUAGE plpgsql
 
 -- === CODE TO TEST DB ===
 

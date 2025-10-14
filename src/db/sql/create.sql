@@ -421,6 +421,36 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql
 
+-- 11. Get KPIs
+
+CREATE OR REPLACE FUNCTION get_kpis()
+RETURNS TABLE(
+	total_users INT,
+	admins INT,
+	mods INT,
+	users INT
+) AS $$
+DECLARE
+	total_users_count INT;
+	admins_count INT;
+	mods_count INT;
+	users_count INT;
+BEGIN
+	SELECT COUNT(a_id) INTO total_users_count FROM accounts;
+	
+	SELECT COUNT(a_id) INTO admins_count FROM accounts
+	WHERE ut_id = 1;
+
+	SELECT COUNT(a_id) INTO mods_count FROM accounts
+	WHERE ut_id = 2;
+
+	SELECT COUNT(a_id) INTO users_count FROM accounts
+	WHERE ut_id = 3;
+
+	RETURN QUERY SELECT total_users_count, admins_count, mods_count, users_count;
+END;
+$$ LANGUAGE plpgsql
+
 -- === CODE TO TEST DB ===
 
 -- 1. Create Users

@@ -11,6 +11,7 @@ import { verifyJWT } from '@/middleware/verifyJWT';
 import helloRoutes from '@/api/routes/hello';
 import authRoutes from '@/api/routes/auth';
 import usersRoutes from '@/api/routes/users';
+import KpiRoutes from '@/api/routes/kpi';
 
 import { getDomain } from '@/helpers/getDomain';
 
@@ -24,6 +25,7 @@ app.use(express.json());
 app.use('/hello', helloRoutes);
 app.use('/auth', authRoutes);
 app.use('/users', verifyJWT, usersRoutes);
+app.use('/kpi', verifyJWT, KpiRoutes);
 
 app.listen(port , () => {
     client;

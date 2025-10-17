@@ -120,7 +120,6 @@ VALUES('inactive');
 
 CREATE VIEW view_all_users AS
 SELECT
-    u.u_id AS user_id,
 	pe.p_first_name AS first_name, 
 	pe.p_last_name AS last_name, 
 	u.u_username AS username,
@@ -134,6 +133,30 @@ SELECT
 FROM accounts acc
 INNER JOIN users u ON acc.u_id = u.u_id
 INNER JOIN persons pe ON u.p_id = pe.p_id
+INNER JOIN user_types ut ON acc.ut_id = ut.ut_id
+INNER JOIN user_permissions up ON acc.up_id = up.up_id
+INNER JOIN user_status us ON acc.us_id = us.us_id;
+
+-- 2. View All Users Details
+
+CREATE VIEW view_all_users_details AS
+SELECT
+	u.u_id AS user_id,
+	pe.p_first_name AS first_name, 
+	pe.p_last_name AS last_name, 
+	u.u_username AS username,
+	u.u_email AS email,
+	pw.pw_hashed_password AS hashed_password,
+	u.u_career AS career, 
+	u.u_location AS user_location, 
+	ut.ut_type AS user_type, 
+	up.up_level AS permission_level,
+	us.us_status AS status,
+	acc.createdAt AS account_created_at
+FROM accounts acc
+INNER JOIN users u ON acc.u_id = u.u_id
+INNER JOIN persons pe ON u.p_id = pe.p_id
+INNER JOIN passwords pw on pw.u_id = u.u_id
 INNER JOIN user_types ut ON acc.ut_id = ut.ut_id
 INNER JOIN user_permissions up ON acc.up_id = up.up_id
 INNER JOIN user_status us ON acc.us_id = us.us_id;
@@ -225,22 +248,27 @@ $$ LANGUAGE plpgsql;
 -- 3. Get Users Info
 
 CREATE OR REPLACE FUNCTION get_users(u_limit INT)
-RETURNS SETOF view_all_users AS $$
+RETURNS TABLE(
+	username VARCHAR(50),
+	email VARCHAR(100),
+	user_type VARCHAR(50),
+	status VARCHAR(50),
+	account_created_at TIMESTAMP
+) AS $$
 BEGIN
-	IF u_limit > 50 THEN
-		RETURN;
-	END IF;
-
-	RETURN QUERY SELECT * FROM view_all_users WHERE status = 'active' LIMIT u_limit;
+	RETURN QUERY SELECT vau.username, vau.email, vau.user_type, vau.status, vau.account_created_at 
+	FROM view_all_users as vau
+	WHERE vau.status = 'active'
+	LIMIT LEAST(u_limit, 50);
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. Get a User Info
+-- 4. Get a User Details
 
-CREATE OR REPLACE FUNCTION get_user(u_id INT)
+CREATE OR REPLACE FUNCTION get_user_details(u_email VARCHAR(100))
 RETURNS SETOF view_all_users AS $$
 BEGIN
-	RETURN QUERY SELECT * FROM view_all_users WHERE user_id = u_id;
+	RETURN QUERY SELECT * FROM view_all_users WHERE email = u_email;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -291,7 +319,7 @@ RETURNS VARCHAR(40) AS $$
 		account_id INT; 
 		status_id INT;
 BEGIN
-	SELECT user_id INTO get_user_id FROM view_all_users
+	SELECT user_id INTO get_user_id FROM view_all_users_details
 	WHERE email = user_email;
 
 	SELECT user_exists INTO user_exist
@@ -371,12 +399,11 @@ BEGIN
 	INNER JOIN user_types AS ut ON ut.ut_id = acc.ut_id
 	WHERE acc.a_id = account_id;
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE plpgsql;
 
 -- 10. Update User Info
 
 CREATE OR REPLACE FUNCTION update_user(
-	user_id INT,
 	un VARCHAR(50),
     e VARCHAR(100),
     n VARCHAR(50),
@@ -386,15 +413,12 @@ CREATE OR REPLACE FUNCTION update_user(
 )
 RETURNS VARCHAR(40) AS $$
 	DECLARE 
-		user_exist INT;
+		user_id INT;
 		person_id INT;
 		password_id INT;
 BEGIN
-	SELECT user_exists INTO user_exist FROM user_exists(user_id);
-
-	IF user_exist = 0 OR user_exist IS NULL THEN
-		RETURN 'User doesnt exists!';
-	END IF;
+	SELECT u_id INTO user_id FROM users
+	WHERE u_email = e;
 
 	SELECT p_id INTO person_id FROM users
 	WHERE u_id = user_id;
@@ -419,7 +443,7 @@ BEGIN
 
 	RETURN 'User was updated successfully!';
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE plpgsql;
 
 -- 11. Get KPIs
 
@@ -449,7 +473,7 @@ BEGIN
 
 	RETURN QUERY SELECT total_users_count, admins_count, mods_count, users_count;
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE plpgsql;
 
 -- === CODE TO TEST DB ===
 

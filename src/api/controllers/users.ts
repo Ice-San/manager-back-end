@@ -103,26 +103,58 @@ export const getUsers = async (req: Request, res: Response) => {
     });
 }
 
-export const getUser = async (req: Request, res: Response) => {
-    const { id } = req.params;
+export const getUserDetails = async (req: Request, res: Response) => {
+    const { email } = req.body;
 
-    const query = 'SELECT * FROM get_user($1);'
-    const result = await client.query(query, [id]);
-    const data = result.rows[0];
-
-    if(!data) {
-        res.status(404).send({ 
-            status: 404, 
-            message: 'User not found... :(',
+    if(!email) {
+        res.status(400).send({
+            status: 400,
+            message: 'Missing required fields!'
         });
         return;
     }
 
-    res.status(200).send({ 
-        status: 200, 
-        message: 'User Found!',
-        data
-    });
+    if(typeof email === 'undefined') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values are undefined!'
+        });
+        return;
+    }
+
+    if(typeof email !== 'string') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values aren\'t strings!'
+        });
+        return;
+    }
+
+    try {
+        const query = 'SELECT * FROM get_user_details($1);'
+        const result = await client.query(query, [email]);
+        const data = result.rows[0];
+
+        if(!data) {
+            res.status(404).send({ 
+                status: 404, 
+                message: 'User not found... :(',
+            });
+            return;
+        }
+
+        res.status(200).send({ 
+            status: 200, 
+            message: 'User Found!',
+            data
+        });
+    } catch (err) {
+        console.error('Something went wrong: ', err);
+        res.status(404).send({ 
+            status: 404, 
+            message: 'User not found... :(',
+        });
+    }
 }
 
 export const deleteUser = async (req: Request, res: Response) => {

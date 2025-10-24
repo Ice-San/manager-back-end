@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { getKpi } from "../controllers/kpi";
+import { getActiveUsers, getKpi } from "../controllers/kpi";
 
 export default Router()
-                    .get("/", getKpi);
+                    .get("/", getKpi)
+                    .get("/active", getActiveUsers);

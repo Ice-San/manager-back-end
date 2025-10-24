@@ -17,8 +17,9 @@ CREATE TABLE users (
     u_id SERIAL PRIMARY KEY,
     u_username VARCHAR(50),
     u_email VARCHAR(100) NOT NULL,
-    u_career VARCHAR(30),
-    u_location VARCHAR(255),
+	u_address VARCHAR(255),
+	u_phone_number VARCHAR(50),
+	u_bio TEXT,
     p_id INT NOT NULL,
     
     FOREIGN KEY (p_id) REFERENCES persons(p_id),
@@ -123,9 +124,10 @@ SELECT
 	pe.p_first_name AS first_name, 
 	pe.p_last_name AS last_name, 
 	u.u_username AS username,
-	u.u_email AS email,
-	u.u_career AS career, 
-	u.u_location AS user_location, 
+	u.u_email AS email, 
+	u.u_address AS address,
+	u.u_phone_number AS phone_number,
+	u.u_bio AS bio,
 	ut.ut_type AS user_type, 
 	up.up_level AS permission_level,
 	us.us_status AS status,
@@ -147,8 +149,9 @@ SELECT
 	u.u_username AS username,
 	u.u_email AS email,
 	pw.pw_hashed_password AS hashed_password,
-	u.u_career AS career, 
-	u.u_location AS user_location, 
+	u.u_address AS address,
+	u.u_phone_number AS phone_number,
+	u.u_bio AS bio, 
 	ut.ut_type AS user_type, 
 	up.up_level AS permission_level,
 	us.us_status AS status,
@@ -192,6 +195,9 @@ CREATE OR REPLACE FUNCTION create_user(
     n VARCHAR(50),
     ln VARCHAR(50),
     g VARCHAR(20),
+	addr VARCHAR(255),
+	pn VARCHAR(50),
+	b TEXT,
     p VARCHAR(255),
     t VARCHAR(10),
 	s VARCHAR(50)
@@ -210,8 +216,8 @@ BEGIN
 	END IF;
 
     -- Insert into users
-    INSERT INTO users (u_username, u_email, p_id)
-    VALUES (un, e, create_person(n, ln, g))
+    INSERT INTO users (u_username, u_email, p_id, u_address, u_phone_number, u_bio)
+    VALUES (un, e, create_person(n, ln, g), addr, pn, b)
     RETURNING users.u_id INTO u_id;
 
     -- Insert into passwords
@@ -363,7 +369,7 @@ DECLARE
 		account_id INT; 
 		status_id INT;
 BEGIN
-	SELECT user_id INTO get_user_id FROM view_all_users
+	SELECT user_id INTO get_user_id FROM view_all_users_details
 	WHERE email = user_email;
 
 	SELECT user_exists INTO user_exist
@@ -409,7 +415,10 @@ CREATE OR REPLACE FUNCTION update_user(
     n VARCHAR(50),
     ln VARCHAR(50),
     g VARCHAR(20),
-	pw VARCHAR(255)
+	pw VARCHAR(255),
+	addr VARCHAR(255),
+	pn VARCHAR(50),
+	b TEXT
 )
 RETURNS VARCHAR(40) AS $$
 	DECLARE 
@@ -428,7 +437,10 @@ BEGIN
 
 	UPDATE users
 	SET u_username = un,
-		u_email = e
+		u_email = e,
+		u_address = addr,
+		u_phone_number = pn,
+		u_bio = b
 	WHERE u_id = user_id;
 
 	UPDATE persons
@@ -475,6 +487,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 12. Get Active Users KPI
+
+CREATE OR REPLACE FUNCTION get_active_users_kpi()
+RETURNS TABLE(total_users INT) AS $$
+DECLARE
+	user_active INT;
+	total_users_count INT;
+BEGIN
+	SELECT us_id INTO user_active FROM user_status WHERE us_status = 'active';
+
+	SELECT COUNT(a_id) INTO total_users_count FROM accounts
+	WHERE us_id = user_active;
+
+	RETURN QUERY SELECT total_users_count;
+END;
+$$ LANGUAGE plpgsql;
+
 -- === CODE TO TEST DB ===
 
 -- 1. Create Users
@@ -485,6 +514,23 @@ SELECT create_user(
     'John', 
     'Doe', 
     'Male', 
+	'Rua de Abril Nº3',
+	'+351 938 745 345',
+	'',
+    'hashedpassword123', 
+    'admin',
+	'active'
+);
+
+SELECT create_user(
+    'edgar_santos', 
+    'es@example.com', 
+    'Edgar', 
+    'Santos', 
+    'Male',
+	'Rua Doutor Anibal de Cantos Nº20',
+	'+351 998 785 745',
+	'Eu gosto de gelados de morango!',
     'hashedpassword123', 
     'admin',
 	'active'
@@ -496,6 +542,9 @@ SELECT create_user(
     'Edgar', 
     'Henriques', 
     'Male', 
+	'Rua da Avenida dos Santos Nº15',
+	'+351 921 545 745',
+	'Montanhas russas são muito divertidas!',
     'edgarvipsupremo789', 
     'moderator',
 	'inactive'
@@ -507,6 +556,9 @@ SELECT create_user(
     'Hector', 
     'Santos', 
     'Male', 
+	'Estação da Liberdade Nº69',
+	'+351 910 467 383',
+	'Be a Developer can sometimes be very thought...',
     'hectorsantos123', 
     'user',
 	'inactive'

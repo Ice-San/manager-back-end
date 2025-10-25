@@ -1,3 +1,30 @@
+-- === DROP VIEWS ===
+DROP VIEW IF EXISTS view_all_users_details CASCADE;
+DROP VIEW IF EXISTS view_all_users CASCADE;
+
+-- === DROP FUNCTIONS ===
+DROP FUNCTION IF EXISTS create_person(VARCHAR, VARCHAR, VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS create_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, TEXT, VARCHAR, VARCHAR, VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS get_users(INT) CASCADE;
+DROP FUNCTION IF EXISTS get_user_details(VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS sign_in(VARCHAR, VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS user_exists(INT) CASCADE;
+DROP FUNCTION IF EXISTS user_verify(VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS delete_user(VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS reactivate_user(VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS update_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS get_kpis() CASCADE;
+DROP FUNCTION IF EXISTS get_active_users_kpi() CASCADE;
+
+-- === DROP TABLES ===
+DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS user_status CASCADE;
+DROP TABLE IF EXISTS user_permissions CASCADE;
+DROP TABLE IF EXISTS user_types CASCADE;
+DROP TABLE IF EXISTS passwords CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS persons CASCADE;
+
 -- === TABLES ===
 
 -- 1. PERSONS
@@ -490,17 +517,34 @@ $$ LANGUAGE plpgsql;
 -- 12. Get Active Users KPI
 
 CREATE OR REPLACE FUNCTION get_active_users_kpi()
-RETURNS TABLE(total_users INT) AS $$
+RETURNS TABLE(
+	total_users INT,
+	admins INT,
+	mods INT,
+	users INT
+) AS $$
 DECLARE
 	user_active INT;
 	total_users_count INT;
+	admins_count INT;
+	mods_count INT;
+	users_count INT;
 BEGIN
 	SELECT us_id INTO user_active FROM user_status WHERE us_status = 'active';
 
 	SELECT COUNT(a_id) INTO total_users_count FROM accounts
 	WHERE us_id = user_active;
 
-	RETURN QUERY SELECT total_users_count;
+	SELECT COUNT(a_id) INTO admins_count FROM accounts
+	WHERE ut_id = 1 AND us_id = user_active;
+
+	SELECT COUNT(a_id) INTO mods_count FROM accounts
+	WHERE ut_id = 2 AND us_id = user_active;
+
+	SELECT COUNT(a_id) INTO users_count FROM accounts
+	WHERE ut_id = 3 AND us_id = user_active;
+
+	RETURN QUERY SELECT total_users_count, admins_count, mods_count, users_count;
 END;
 $$ LANGUAGE plpgsql;
 

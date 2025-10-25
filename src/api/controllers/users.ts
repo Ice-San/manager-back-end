@@ -52,7 +52,7 @@ export const createUser = async (req: Request, res: Response) => {
             return;
         }
 
-        const query = `SELECT * FROM create_user($1, $2, '', '', '', 'manager_app', $3, 'active')`;
+        const query = `SELECT * FROM create_user($1, $2, '', '', '', '', '', '', 'manager_app', $3, 'active')`;
         const values = [
             username,
             email,

@@ -292,6 +292,7 @@ BEGIN
 	RETURN QUERY SELECT vau.username, vau.email, vau.user_type, vau.status, vau.account_created_at 
 	FROM view_all_users as vau
 	WHERE vau.status = 'active'
+	ORDER BY vau.account_created_at DESC
 	LIMIT LEAST(u_limit, 50);
 END;
 $$ LANGUAGE plpgsql;

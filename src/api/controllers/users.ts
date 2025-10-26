@@ -210,6 +210,115 @@ export const deleteUser = async (req: Request, res: Response) => {
     }
 }
 
+export const updateUser = async (req: Request, res: Response) => {
+    const { username, email, phone, role, address, bio, userStatus } = req.body;
+
+    if(!email || !username || !role || !userStatus) {
+        res.status(400).send({
+            status: 400,
+            message: 'Missing required fields!'
+        });
+        return;
+    }
+
+    if(typeof email === 'undefined' || typeof username === 'undefined' || typeof phone === 'undefined' || typeof role === 'undefined' || typeof address === 'undefined' || typeof bio === 'undefined' || typeof userStatus === 'undefined') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values are undefined!'
+        });
+        return;
+    }
+
+    if(typeof email !== 'string' || typeof username !== 'string' || typeof phone !== 'string' || typeof role !== 'string' || typeof address !== 'string' || typeof bio !== 'string' || typeof userStatus !== 'string') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values aren\'t strings!'
+        });
+        return;
+    }
+
+    try {
+        const query = 'SELECT * FROM update_user($1, $2, $3, $4, $5, $6, $7)';
+        const values = [username, email, phone, role, address, bio, userStatus]
+        const result = await client.query(query, values);
+        const data = result.rows[0];
+
+        if(!data) {
+            res.status(404).send({
+                status: 404,
+                message: 'Something in updating user went wrong...'
+            });
+            return;
+        }
+
+        res.status(200).send({
+            status: 200,
+            message: 'User was updated Successfully!',
+            data
+        })
+    } catch (err) {
+        console.error('Updating user failed:', err);
+        res.status(404).send({
+            status: 404,
+            message: 'Something in updating user went wrong...'
+        });
+    }
+}
+
+export const updatePassword = async (req: Request, res: Response) => {
+    const { email, newPassword } = req.body;
+
+    if(!email || !newPassword) {
+        res.status(400).send({
+            status: 400,
+            message: 'Missing required fields!'
+        });
+        return;
+    }
+
+    if(typeof email === 'undefined' || typeof newPassword === 'undefined') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values are undefined!'
+        });
+        return;
+    }
+
+    if(typeof email !== 'string' || typeof newPassword !== 'string') {
+        res.status(400).send({
+            status: 400,
+            message: 'The values aren\'t strings!'
+        });
+        return;
+    }
+
+    try {
+        const query = 'SELECT * FROM update_user_password($1, $2)';
+        const result = await client.query(query, [email, newPassword]);
+        const data = result.rows[0];
+
+        if(!data) {
+            res.status(404).send({
+                status: 404,
+                message: 'Something in reactivating user went wrong...'
+            });
+            return;
+        }
+
+        res.status(200).send({
+            status: 200,
+            message: 'Password was Updated Successfully!',
+            data
+        })
+    } catch (err) {
+        console.error('Updating password failed:', err);
+        res.status(404).send({
+            status: 404,
+            message: 'Something in updating password went wrong...'
+        });
+    }
+}
+
 export const reactivateUser = async (req: Request, res: Response) => {
     const { email } = req.body;
 

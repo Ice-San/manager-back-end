@@ -12,7 +12,8 @@ DROP FUNCTION IF EXISTS user_exists(INT) CASCADE;
 DROP FUNCTION IF EXISTS user_verify(VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS delete_user(VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS reactivate_user(VARCHAR) CASCADE;
-DROP FUNCTION IF EXISTS update_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS update_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, TEXT, VARCHAR) CASCADE;
+DROP FUNCTION IF EXISTS update_user_password(VARCHAR, VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS get_kpis() CASCADE;
 DROP FUNCTION IF EXISTS get_active_users_kpi() CASCADE;
 
@@ -440,28 +441,39 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION update_user(
 	un VARCHAR(50),
     e VARCHAR(100),
-    n VARCHAR(50),
-    ln VARCHAR(50),
-    g VARCHAR(20),
-	pw VARCHAR(255),
-	addr VARCHAR(255),
 	pn VARCHAR(50),
-	b TEXT
+	r VARCHAR(50),
+	addr VARCHAR(255),
+	b TEXT,
+	s VARCHAR(50)
 )
 RETURNS VARCHAR(40) AS $$
 	DECLARE 
 		user_id INT;
-		person_id INT;
-		password_id INT;
+		role_id INT;
+		permission_id INT;
+		status_id INT;
 BEGIN
 	SELECT u_id INTO user_id FROM users
 	WHERE u_email = e;
 
-	SELECT p_id INTO person_id FROM users
-	WHERE u_id = user_id;
+	SELECT ut_id INTO role_id FROM user_types
+	WHERE ut_type = r;
 
-	SELECT pw_id INTO password_id FROM passwords
-	WHERE u_id = user_id;
+	SELECT us_id INTO status_id FROM user_status
+	WHERE us_status = s;
+
+	IF r = 'admin' THEN
+		SELECT up_id INTO permission_id FROM user_permissions WHERE up_level = 1;
+	END IF;
+	
+	IF r = 'moderator' THEN
+		SELECT up_id INTO permission_id FROM user_permissions WHERE up_level = 2;
+	END IF;
+	
+	IF r = 'user' THEN
+		SELECT up_id INTO permission_id FROM user_permissions WHERE up_level = 3;
+	END IF;
 
 	UPDATE users
 	SET u_username = un,
@@ -471,21 +483,33 @@ BEGIN
 		u_bio = b
 	WHERE u_id = user_id;
 
-	UPDATE persons
-	SET	p_first_name = n,
-		p_last_name = ln,
-		p_genre = g
-	WHERE p_id = person_id;
-
-	UPDATE passwords
-	SET pw_hashed_password = pw
-	WHERE pw_id = password_id;
+	UPDATE accounts
+		SET ut_id = role_id,
+			up_id = permission_id,
+			us_id = status_id
+	WHERE u_id = user_id;
 
 	RETURN 'User was updated successfully!';
 END;
 $$ LANGUAGE plpgsql;
 
--- 11. Get KPIs
+-- 11. Update User Password
+
+CREATE OR REPLACE FUNCTION update_user_password(e VARCHAR(100), pw VARCHAR(255))
+RETURNS VARCHAR(40) AS $$
+	DECLARE user_id INT;
+BEGIN
+	SELECT u_id INTO user_id FROM users
+	WHERE u_email = e;
+
+	UPDATE passwords SET pw_hashed_password = pw
+	WHERE u_id = user_id;
+
+	RETURN 'User was updated successfully!';
+END;
+$$ LANGUAGE plpgsql;
+
+-- 12. Get KPIs
 
 CREATE OR REPLACE FUNCTION get_kpis()
 RETURNS TABLE(
@@ -515,7 +539,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 12. Get Active Users KPI
+-- 13. Get Active Users KPI
 
 CREATE OR REPLACE FUNCTION get_active_users_kpi()
 RETURNS TABLE(

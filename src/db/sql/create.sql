@@ -489,9 +489,9 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION get_kpis()
 RETURNS TABLE(
-	total_users INT,
+	total INT,
 	admins INT,
-	mods INT,
+	moderators INT,
 	users INT
 ) AS $$
 DECLARE
@@ -519,9 +519,9 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION get_active_users_kpi()
 RETURNS TABLE(
-	total_users INT,
+	total INT,
 	admins INT,
-	mods INT,
+	moderators INT,
 	users INT
 ) AS $$
 DECLARE

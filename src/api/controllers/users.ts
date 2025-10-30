@@ -88,8 +88,8 @@ export const getUsers = async (req: Request, res: Response) => {
     const { userId } = res.locals;
 
     const query = 'SELECT * FROM get_all_users($1, $2)';
-    const values = [max, Number(userId)];
-    const result = max ? await client.query(query, values) : await client.query(query, [50, Number(userId)]);
+    const values = [max, userId];
+    const result = max ? await client.query(query, values) : await client.query(query, [50, userId]);
     const data = result.rows;
 
     if(!data)

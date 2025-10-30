@@ -5,10 +5,10 @@ DROP VIEW IF EXISTS view_all_users CASCADE;
 -- === DROP FUNCTIONS ===
 DROP FUNCTION IF EXISTS create_person(VARCHAR, VARCHAR, VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS create_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, TEXT, VARCHAR, VARCHAR, VARCHAR) CASCADE;
-DROP FUNCTION IF EXISTS get_all_users(INT) CASCADE;
+DROP FUNCTION IF EXISTS get_all_users(UUID) CASCADE;
 DROP FUNCTION IF EXISTS get_user_details(VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS sign_in(VARCHAR, VARCHAR) CASCADE;
-DROP FUNCTION IF EXISTS user_exists(INT) CASCADE;
+DROP FUNCTION IF EXISTS user_exists(UUID) CASCADE;
 DROP FUNCTION IF EXISTS user_verify(VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS delete_user(VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS reactivate_user(VARCHAR) CASCADE;
@@ -16,7 +16,7 @@ DROP FUNCTION IF EXISTS update_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR,
 DROP FUNCTION IF EXISTS update_user_password(VARCHAR, VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS get_kpis() CASCADE;
 DROP FUNCTION IF EXISTS get_active_users_kpi() CASCADE;
-DROP FUNCTION IF EXISTS get_other_users(INT, INT) CASCADE;
+DROP FUNCTION IF EXISTS get_other_users(UUID, UUID) CASCADE;
 
 -- === DROP TABLES ===
 DROP TABLE IF EXISTS accounts CASCADE;
@@ -27,12 +27,16 @@ DROP TABLE IF EXISTS passwords CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS persons CASCADE;
 
+-- === EXTENSIONS ===
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- === TABLES ===
 
 -- 1. PERSONS
 
 CREATE TABLE persons (
-    p_id SERIAL PRIMARY KEY,
+    p_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     p_first_name VARCHAR(50),
     p_last_name VARCHAR(50),
     p_age VARCHAR(2),
@@ -43,13 +47,13 @@ CREATE TABLE persons (
 -- 2. USERS
 
 CREATE TABLE users (
-    u_id SERIAL PRIMARY KEY,
+    u_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     u_username VARCHAR(50),
     u_email VARCHAR(100) NOT NULL,
 	u_address VARCHAR(255),
 	u_phone_number VARCHAR(50),
 	u_bio TEXT,
-    p_id INT NOT NULL,
+    p_id UUID NOT NULL,
     
     FOREIGN KEY (p_id) REFERENCES persons(p_id),
     
@@ -59,9 +63,9 @@ CREATE TABLE users (
 -- 3. PASSWORDS
 
 CREATE TABLE passwords (
-    pw_id SERIAL PRIMARY KEY,
+    pw_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pw_hashed_password VARCHAR(255) NOT NULL,
-    u_id INT NOT NULL,
+    u_id UUID NOT NULL,
     
     FOREIGN KEY (u_id) REFERENCES users(u_id),
     
@@ -71,7 +75,7 @@ CREATE TABLE passwords (
 -- 4. USER TYPES
 
 CREATE TABLE user_types (
-    ut_id SERIAL PRIMARY KEY,
+    ut_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ut_type VARCHAR(50) UNIQUE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -79,7 +83,7 @@ CREATE TABLE user_types (
 -- 5. USER PERMISSIONS
 
 CREATE TABLE user_permissions (
-    up_id SERIAL PRIMARY KEY,
+    up_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     up_level INT UNIQUE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -87,7 +91,7 @@ CREATE TABLE user_permissions (
 -- 6. USER STATUS
 
 CREATE TABLE user_status (
-	us_id SERIAL PRIMARY KEY,
+	us_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	us_status VARCHAR(50),
 	createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -95,11 +99,11 @@ CREATE TABLE user_status (
 -- 7. ACCOUNTS
 
 CREATE TABLE accounts (
-    a_id SERIAL PRIMARY KEY,
-    u_id INT NOT NULL,
-    ut_id INT NOT NULL,
-    up_id INT NOT NULL,
-	us_id INT NOT NULL,
+    a_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    u_id UUID NOT NULL,
+    ut_id UUID NOT NULL,
+    up_id UUID NOT NULL,
+	us_id UUID NOT NULL,
     
     FOREIGN KEY (u_id) REFERENCES users(u_id),
     FOREIGN KEY (ut_id) REFERENCES user_types(ut_id),
@@ -202,10 +206,10 @@ CREATE OR REPLACE FUNCTION create_person(
     last_name VARCHAR(50),
     gender VARCHAR(20)
 ) 
-RETURNS INT AS
+RETURNS UUID AS
 $$
 DECLARE
-    person_id INT;
+    person_id UUID;
 BEGIN
     -- Insert into persons table (assuming this table exists)
     INSERT INTO persons (p_first_name, p_last_name, p_genre)
@@ -234,10 +238,10 @@ CREATE OR REPLACE FUNCTION create_user(
 RETURNS SETOF view_all_users AS
 $$
 DECLARE
-    u_id INT;
-    ut_admin_id INT;
-    up_admin_id INT;
-	us_admin_id INT;
+    u_id UUID;
+    ut_admin_id UUID;
+    up_admin_id UUID;
+	us_admin_id UUID;
 BEGIN
 	-- Verify if user type is valid
 	IF t IS NULL OR t = '' THEN
@@ -282,7 +286,7 @@ $$ LANGUAGE plpgsql;
 
 -- 3. Get Users Info
 
-CREATE OR REPLACE FUNCTION get_all_users(u_limit INT, user_id INT)
+CREATE OR REPLACE FUNCTION get_all_users(u_limit INT, user_id UUID)
 RETURNS TABLE(
 	username VARCHAR(50),
 	email VARCHAR(100),
@@ -305,6 +309,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+SELECT * FROM get_all_users(3, '6a8b750c-396c-49f3-9555-cdbed8d07133');
+
 -- 4. Get a User Details
 
 CREATE OR REPLACE FUNCTION get_user_details(u_email VARCHAR(100))
@@ -317,7 +323,7 @@ $$ LANGUAGE plpgsql;
 -- 5. SignIn
 
 CREATE OR REPLACE FUNCTION sign_in(user_email VARCHAR(100), user_password VARCHAR(255))
-RETURNS TABLE(u_id INT) AS $$
+RETURNS TABLE(u_id UUID) AS $$
 BEGIN
 	RETURN QUERY
 		SELECT u.u_id
@@ -331,7 +337,7 @@ $$ LANGUAGE plpgsql;
 
 -- 6. Check User Exists
 
-CREATE OR REPLACE FUNCTION user_exists(user_id INT)
+CREATE OR REPLACE FUNCTION user_exists(user_id UUID)
 RETURNS INT AS $$
 	DECLARE user_exist INT;
 BEGIN
@@ -358,16 +364,15 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION delete_user(user_email VARCHAR(100))
 RETURNS VARCHAR(40) AS $$
 	DECLARE 
-		get_user_id INT;
+		get_user_id UUID;
 		user_exist INT;
-		account_id INT; 
-		status_id INT;
+		account_id UUID; 
+		status_id UUID;
 BEGIN
 	SELECT user_id INTO get_user_id FROM view_all_users_details
 	WHERE email = user_email;
 
-	SELECT user_exists INTO user_exist
-	FROM user_exists(get_user_id);
+	SELECT user_exists(get_user_id) INTO user_exist;
 
 	IF user_exist = 0 OR user_exist IS NULL THEN
 		RETURN 'User doesnt exists!';
@@ -402,16 +407,15 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION reactivate_user(user_email VARCHAR(100))
 RETURNS TABLE(username VARCHAR(50), user_type VARCHAR(50), joined TIMESTAMP) AS $$
 DECLARE 
-		get_user_id INT;
+		get_user_id UUID;
 		user_exist INT;
-		account_id INT; 
-		status_id INT;
+		account_id UUID; 
+		status_id UUID;
 BEGIN
 	SELECT user_id INTO get_user_id FROM view_all_users_details
 	WHERE email = user_email;
 
-	SELECT user_exists INTO user_exist
-	FROM user_exists(get_user_id);
+	SELECT user_exists(get_user_id) INTO user_exist;
 
 	IF user_exist = 0 OR user_exist IS NULL THEN
 		RETURN;
@@ -458,10 +462,10 @@ CREATE OR REPLACE FUNCTION update_user(
 )
 RETURNS VARCHAR(40) AS $$
 	DECLARE 
-		user_id INT;
-		role_id INT;
-		permission_id INT;
-		status_id INT;
+		user_id UUID;
+		role_id UUID;
+		permission_id UUID;
+		status_id UUID;
 BEGIN
 	SELECT u_id INTO user_id FROM users
 	WHERE u_email = e;
@@ -506,7 +510,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION update_user_password(e VARCHAR(100), pw VARCHAR(255))
 RETURNS VARCHAR(40) AS $$
-	DECLARE user_id INT;
+	DECLARE user_id UUID;
 BEGIN
 	SELECT u_id INTO user_id FROM users
 	WHERE u_email = e;
@@ -528,21 +532,28 @@ RETURNS TABLE(
 	users INT
 ) AS $$
 DECLARE
+	ut_admin UUID;
+	ut_mod UUID;
+	ut_user UUID;
 	total_users_count INT;
 	admins_count INT;
 	mods_count INT;
 	users_count INT;
 BEGIN
+	SELECT ut_id INTO ut_admin FROM user_types WHERE ut_type = 'admin';
+	SELECT ut_id INTO ut_mod FROM user_types WHERE ut_type = 'moderator';
+	SELECT ut_id INTO ut_user FROM user_types WHERE ut_type = 'user';
+
 	SELECT COUNT(a_id) INTO total_users_count FROM accounts;
 	
 	SELECT COUNT(a_id) INTO admins_count FROM accounts
-	WHERE ut_id = 1;
+	WHERE ut_id = ut_admin;
 
 	SELECT COUNT(a_id) INTO mods_count FROM accounts
-	WHERE ut_id = 2;
+	WHERE ut_id = ut_mod;
 
 	SELECT COUNT(a_id) INTO users_count FROM accounts
-	WHERE ut_id = 3;
+	WHERE ut_id = ut_user;
 
 	RETURN QUERY SELECT total_users_count, admins_count, mods_count, users_count;
 END;
@@ -558,7 +569,10 @@ RETURNS TABLE(
 	users INT
 ) AS $$
 DECLARE
-	user_active INT;
+	user_active UUID;
+	ut_admin UUID;
+	ut_mod UUID;
+	ut_user UUID;
 	total_users_count INT;
 	admins_count INT;
 	mods_count INT;
@@ -566,17 +580,21 @@ DECLARE
 BEGIN
 	SELECT us_id INTO user_active FROM user_status WHERE us_status = 'active';
 
+	SELECT ut_id INTO ut_admin FROM user_types WHERE ut_type = 'admin';
+	SELECT ut_id INTO ut_mod FROM user_types WHERE ut_type = 'moderator';
+	SELECT ut_id INTO ut_user FROM user_types WHERE ut_type = 'user';
+
 	SELECT COUNT(a_id) INTO total_users_count FROM accounts
 	WHERE us_id = user_active;
-
+	
 	SELECT COUNT(a_id) INTO admins_count FROM accounts
-	WHERE ut_id = 1 AND us_id = user_active;
+	WHERE ut_id = ut_admin AND us_id = user_active;
 
 	SELECT COUNT(a_id) INTO mods_count FROM accounts
-	WHERE ut_id = 2 AND us_id = user_active;
+	WHERE ut_id = ut_mod AND us_id = user_active;
 
 	SELECT COUNT(a_id) INTO users_count FROM accounts
-	WHERE ut_id = 3 AND us_id = user_active;
+	WHERE ut_id = ut_user AND us_id = user_active;
 
 	RETURN QUERY SELECT total_users_count, admins_count, mods_count, users_count;
 END;
@@ -584,7 +602,7 @@ $$ LANGUAGE plpgsql;
 
 -- 14. Get Users Except the one who trigger
 
-CREATE OR REPLACE FUNCTION get_other_users(u_limit INT, user_id INT)
+CREATE OR REPLACE FUNCTION get_other_users(u_limit INT, user_id UUID)
 RETURNS TABLE(
 	username VARCHAR(50),
 	email VARCHAR(100),
@@ -604,8 +622,6 @@ BEGIN
 	LIMIT LEAST(u_limit, 50);
 END;
 $$ LANGUAGE plpgsql;
-
-SELECT * FROM get_other_users(3, 1)
 
 -- === CODE TO TEST DB ===
 

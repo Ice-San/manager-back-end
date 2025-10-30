@@ -5,7 +5,7 @@ DROP VIEW IF EXISTS view_all_users CASCADE;
 -- === DROP FUNCTIONS ===
 DROP FUNCTION IF EXISTS create_person(VARCHAR, VARCHAR, VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS create_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, TEXT, VARCHAR, VARCHAR, VARCHAR) CASCADE;
-DROP FUNCTION IF EXISTS get_users(INT) CASCADE;
+DROP FUNCTION IF EXISTS get_all_users(INT) CASCADE;
 DROP FUNCTION IF EXISTS get_user_details(VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS sign_in(VARCHAR, VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS user_exists(INT) CASCADE;
@@ -16,6 +16,7 @@ DROP FUNCTION IF EXISTS update_user(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR,
 DROP FUNCTION IF EXISTS update_user_password(VARCHAR, VARCHAR) CASCADE;
 DROP FUNCTION IF EXISTS get_kpis() CASCADE;
 DROP FUNCTION IF EXISTS get_active_users_kpi() CASCADE;
+DROP FUNCTION IF EXISTS get_other_users(INT, INT) CASCADE;
 
 -- === DROP TABLES ===
 DROP TABLE IF EXISTS accounts CASCADE;
@@ -281,7 +282,7 @@ $$ LANGUAGE plpgsql;
 
 -- 3. Get Users Info
 
-CREATE OR REPLACE FUNCTION get_users(u_limit INT)
+CREATE OR REPLACE FUNCTION get_all_users(u_limit INT, user_id INT)
 RETURNS TABLE(
 	username VARCHAR(50),
 	email VARCHAR(100),
@@ -289,11 +290,17 @@ RETURNS TABLE(
 	status VARCHAR(50),
 	account_created_at TIMESTAMP
 ) AS $$
+DECLARE
+	user_email VARCHAR(100);
 BEGIN
+	SELECT u_email INTO user_email FROM users WHERE u_id = user_id;
+
 	RETURN QUERY SELECT vau.username, vau.email, vau.user_type, vau.status, vau.account_created_at 
 	FROM view_all_users as vau
 	WHERE vau.status = 'active'
-	ORDER BY vau.account_created_at DESC
+	ORDER BY 
+		CASE WHEN vau.email = user_email THEN 1 ELSE 0 END,
+		vau.account_created_at DESC
 	LIMIT LEAST(u_limit, 50);
 END;
 $$ LANGUAGE plpgsql;
@@ -574,6 +581,31 @@ BEGIN
 	RETURN QUERY SELECT total_users_count, admins_count, mods_count, users_count;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 14. Get Users Except the one who trigger
+
+CREATE OR REPLACE FUNCTION get_other_users(u_limit INT, user_id INT)
+RETURNS TABLE(
+	username VARCHAR(50),
+	email VARCHAR(100),
+	user_type VARCHAR(50),
+	status VARCHAR(50),
+	account_created_at TIMESTAMP
+) AS $$
+DECLARE 
+	user_email VARCHAR(100);
+BEGIN
+	SELECT u_email INTO user_email FROM users WHERE u_id = user_id;
+
+	RETURN QUERY SELECT vau.username, vau.email, vau.user_type, vau.status, vau.account_created_at 
+	FROM view_all_users as vau
+	WHERE vau.status = 'active' AND vau.email != user_email
+	ORDER BY vau.account_created_at DESC
+	LIMIT LEAST(u_limit, 50);
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM get_other_users(3, 1)
 
 -- === CODE TO TEST DB ===
 

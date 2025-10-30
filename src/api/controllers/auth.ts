@@ -11,7 +11,11 @@ export const signIn = async (req: Request, res: Response) => {
     if(typeof email === "undefined" || typeof password === "undefined") {
         res.status(400).send({
             status: 400,
-            message: "The values are undefined!"
+            message: "The values are undefined!",
+            data: {
+                success: false,
+                token: ''
+            }
         });
         return;
     }
@@ -19,7 +23,11 @@ export const signIn = async (req: Request, res: Response) => {
     if(typeof email !== "string" && typeof password !== "string") {
         res.status(400).send({
             status: 400,
-            message: "The values aren't strings!"
+            message: "The values aren't strings!",
+            data: {
+                success: false,
+                token: ''
+            }
         });
         return;
     }
@@ -29,6 +37,18 @@ export const signIn = async (req: Request, res: Response) => {
         const values: string[] = [email, password];
         const result = await client.query(query, values);
         const userId: string = result.rows[0]?.u_id;
+
+        if(!userId) {
+            res.status(404).send({
+                status: 404,
+                message: "User doesn't exists!",
+                data: {
+                    success: false,
+                    token: ''
+                }
+            })
+            return;
+        }
 
         if(result.rows.length) {
             const token = generateToken({userId});

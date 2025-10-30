@@ -316,7 +316,9 @@ BEGIN
 		SELECT u.u_id
 		FROM users AS u
 		INNER JOIN passwords AS pw ON pw.u_id = u.u_id
-		WHERE u.u_email = user_email AND pw.pw_hashed_password = user_password;
+		INNER JOIN accounts AS a ON a.u_id = u.u_id
+		INNER JOIN user_status AS us on us.us_id = a.us_id
+		WHERE u.u_email = user_email AND pw.pw_hashed_password = user_password AND us.us_status = 'active';
 END;
 $$ LANGUAGE plpgsql;
 

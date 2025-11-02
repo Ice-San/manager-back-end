@@ -1,6 +1,8 @@
 import client from "@/db/config";
 import { userVerify } from "@/helpers/userVerify";
 import { Request, Response } from "express";
+import bcrypt from 'bcrypt';
+import { validatePassword } from "@/helpers/validatePassword";
 
 export const createUser = async (req: Request, res: Response) => {
     const { username, email, role } = req.body;
@@ -52,10 +54,13 @@ export const createUser = async (req: Request, res: Response) => {
             return;
         }
 
-        const query = `SELECT * FROM create_user($1, $2, '', '', '', '', '', '', 'manager_app', $3, 'active')`;
+        const hashedPassword = await bcrypt.hash('manager_app', 10);
+        
+        const query = `SELECT * FROM create_user($1, $2, '', '', '', '', '', '', $3, $4, 'active')`;
         const values = [
             username,
             email,
+            hashedPassword,
             role
         ];
         const result = await client.query(query, values);
@@ -268,9 +273,9 @@ export const updateUser = async (req: Request, res: Response) => {
 }
 
 export const updatePassword = async (req: Request, res: Response) => {
-    const { email, newPassword } = req.body;
+    const { email, currentPassword, newPassword } = req.body;
 
-    if(!email || !newPassword) {
+    if(!email || !currentPassword || !newPassword) {
         res.status(400).send({
             status: 400,
             message: 'Missing required fields!'
@@ -278,7 +283,7 @@ export const updatePassword = async (req: Request, res: Response) => {
         return;
     }
 
-    if(typeof email === 'undefined' || typeof newPassword === 'undefined') {
+    if(typeof email === 'undefined' || typeof currentPassword === 'undefined' || typeof newPassword === 'undefined') {
         res.status(400).send({
             status: 400,
             message: 'The values are undefined!'
@@ -286,7 +291,7 @@ export const updatePassword = async (req: Request, res: Response) => {
         return;
     }
 
-    if(typeof email !== 'string' || typeof newPassword !== 'string') {
+    if(typeof email !== 'string' || typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
         res.status(400).send({
             status: 400,
             message: 'The values aren\'t strings!'
@@ -295,8 +300,23 @@ export const updatePassword = async (req: Request, res: Response) => {
     }
 
     try {
+        const isValid = await validatePassword(email, currentPassword);
+        if(!isValid) {
+            res.status(400).send({
+                status: 400,
+                message: "Invalid email or password. Please try again.",
+                data: {
+                    success: false,
+                    token: ''
+                }
+            });
+            return;
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
         const query = 'SELECT * FROM update_user_password($1, $2)';
-        const result = await client.query(query, [email, newPassword]);
+        const result = await client.query(query, [email, hashedPassword]);
         const data = result.rows[0];
 
         if(!data) {

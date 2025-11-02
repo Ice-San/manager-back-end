@@ -2,6 +2,8 @@ import client from "@/db/config";
 import { generateToken } from "@/helpers/jwt";
 import { Request, Response } from "express";
 import jsonwebtoken from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import { validatePassword } from "@/helpers/validatePassword";
 
 const { JWT } = process.env;
 
@@ -33,8 +35,21 @@ export const signIn = async (req: Request, res: Response) => {
     }
 
     try {
-        const query: string = 'SELECT * FROM sign_in($1, $2)';
-        const values: string[] = [email, password];
+        const isValid = await validatePassword(email, password);
+        if(!isValid) {
+            res.status(400).send({
+                status: 400,
+                message: "Invalid email or password. Please try again.",
+                data: {
+                    success: false,
+                    token: ''
+                }
+            });
+            return;
+        }
+
+        const query: string = 'SELECT * FROM get_user_id($1)';
+        const values: string[] = [email];
         const result = await client.query(query, values);
         const userId: string = result.rows[0]?.u_id;
 

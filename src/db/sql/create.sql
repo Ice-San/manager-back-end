@@ -616,10 +616,35 @@ BEGIN
 	SELECT u_email INTO user_email FROM users WHERE u_id = user_id;
 
 	RETURN QUERY SELECT vau.username, vau.email, vau.user_type, vau.status, vau.account_created_at 
-	FROM view_all_users as vau
+	FROM view_all_users AS vau
 	WHERE vau.status = 'active' AND vau.email != user_email
 	ORDER BY vau.account_created_at DESC
 	LIMIT LEAST(u_limit, 50);
+END;
+$$ LANGUAGE plpgsql;
+
+-- 15. Get User Password
+
+CREATE OR REPLACE FUNCTION get_password(user_email VARCHAR(100))
+RETURNS TABLE(
+	hashed_password VARCHAR(255)
+) AS $$
+BEGIN
+	RETURN QUERY SELECT vaud.hashed_password FROM view_all_users_details AS vaud WHERE email = user_email;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 16. Get User ID
+
+CREATE OR REPLACE FUNCTION get_user_id(user_email VARCHAR(100))
+RETURNS TABLE(u_id UUID) AS $$
+BEGIN
+	RETURN QUERY
+		SELECT u.u_id
+		FROM users AS u
+		INNER JOIN accounts AS a ON a.u_id = u.u_id
+		INNER JOIN user_status AS us on us.us_id = a.us_id
+		WHERE u.u_email = user_email AND us.us_status = 'active';
 END;
 $$ LANGUAGE plpgsql;
 
